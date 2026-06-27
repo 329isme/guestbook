@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+@font-face{
+    font-family:"Gmarket";
+    src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff")
+    format("woff");
+}
+
+:root{
+
+    --pink:#ff8fc4;
+    --border:#ffd5e8;
+    --bg:#fffafd;
+    --bubble:#ffffff;
+
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    font-family:"Gmarket";
+
+    background:
+    repeating-linear-gradient(
+        45deg,
+        #fff9fc,
+        #fff9fc 14px,
+        #fff4f8 14px,
+        #fff4f8 28px
+    );
+
+    padding:10px;
+}
+
+.wrap{
+
+    width:100%;
+    max-width:400px;
+
+    margin:auto;
+
+    border:2px solid var(--border);
+
+    border-radius:24px;
+
+    background:var(--bg);
+
+    overflow:hidden;
+
+    box-shadow:
+    0 0 15px rgba(255,182,217,.15);
+}
+
+.header{
+
+    text-align:center;
+
+    padding:14px;
+
+    color:var(--pink);
+
+    font-size:18px;
+
+    border-bottom:2px solid var(--border);
+}
+
+/* 채팅 영역 */
+
+.chat{
+
+    height:420px;
+
+    overflow-y:auto;
+
+    padding:12px;
+}
+
+.msg{
+
+    margin-bottom:14px;
+}
+
+.nick{
+
+    color:var(--pink);
+
+    font-size:12px;
+
+    margin-bottom:4px;
+}
+
+.owner{
+
+    margin-left:5px;
+
+    background:#ffd7ea;
+
+    color:#ff6bb1;
+
+    padding:2px 8px;
+
+    border-radius:999px;
+
+    font-size:11px;
+}
+
+.bubble{
+
+    background:var(--bubble);
+
+    border:2px solid var(--border);
+
+    border-radius:18px;
+
+    padding:12px;
+
+    width:fit-content;
+
+    max-width:90%;
+
+    color:#444;
+
+    line-height:1.5;
+}
+
+.time{
+
+    font-size:11px;
+
+    color:#aaa;
+
+    margin-top:4px;
+}
+
+/* 입력 영역 */
+
+.form{
+
+    border-top:2px solid var(--border);
+
+    padding:12px;
+}
+
+input,
+textarea{
+
+    width:100%;
+
+    border:2px solid var(--border);
+
+    border-radius:14px;
+
+    padding:10px;
+
+    font-family:"Gmarket";
+
+    margin-bottom:8px;
+
+    outline:none;
+}
+
+textarea{
+
+    height:70px;
+
+    resize:none;
+}
+
+button{
+
+    width:100%;
+
+    border:none;
+
+    border-radius:999px;
+
+    padding:12px;
+
+    background:
+    linear-gradient(
+        180deg,
+        #ffd8eb,
+        #ffb7d8
+    );
+
+    color:white;
+
+    font-family:"Gmarket";
+
+    cursor:pointer;
+}
+
+button:hover{
+
+    filter:brightness(.98);
+}
+
+</style>
+
+<script type="module">
+
+import { createClient }
+from 'https://esm.sh/@supabase/supabase-js'
+
+const supabase = createClient(
+    'https://szddmhwystebpmqqbxzh.supabase.co/rest/v1/',
+    'sb_publishable_PqxjJWezuAvwEaBFqeF7eg_7QCGICJ3'
+)
+
+const ownerName = "마생";
+
+async function loadMessages(){
+
+    const { data } = await supabase
+    .from('guestbook')
+    .select('*')
+    .order('created_at',{ascending:false})
+
+    const chat =
+    document.getElementById('chat');
+
+    chat.innerHTML = '';
+
+    data.forEach(msg=>{
+
+        const badge =
+        msg.nickname === ownerName
+        ? `<span class="owner">주인장</span>`
+        : '';
+
+        chat.innerHTML += `
+
+        <div class="msg">
+
+            <div class="nick">
+                🎀 ${msg.nickname}
+                ${badge}
+            </div>
+
+            <div class="bubble">
+                ${msg.message}
+            </div>
+
+            <div class="time">
+                ${new Date(msg.created_at)
+                .toLocaleString('ko-KR')}
+            </div>
+
+        </div>
+
+        `;
+    });
+}
+
+window.sendMessage = async()=>{
+
+    const nickname =
+    document.getElementById('nickname')
+    .value.trim();
+
+    const message =
+    document.getElementById('message')
+    .value.trim();
+
+    if(!nickname || !message){
+        alert('닉네임과 메시지를 입력해 주세요 ♡');
+        return;
+    }
+
+    localStorage.setItem(
+        'guestbook_nickname',
+        nickname
+    );
+
+    await supabase
+    .from('guestbook')
+    .insert([
+        {
+            nickname,
+            message
+        }
+    ]);
+
+    document
+    .getElementById('message')
+    .value='';
+
+    loadMessages();
+}
+
+window.onload = ()=>{
+
+    const saved =
+    localStorage.getItem(
+        'guestbook_nickname'
+    );
+
+    if(saved){
+
+        document
+        .getElementById('nickname')
+        .value = saved;
+    }
+
+    loadMessages();
+}
+
+supabase
+.channel('guestbook')
+.on(
+'postgres_changes',
+{
+event:'INSERT',
+schema:'public',
+table:'guestbook'
+},
+()=>{
+loadMessages();
+}
+)
+.subscribe();
+
+</script>
+
+</head>
+
+<body>
+
+<div class="wrap">
+
+```
+<div class="header">
+    ♡ GUEST BOOK ♡
+</div>
+
+<div class="chat" id="chat">
+
+    <div class="msg">
+
+        <div class="nick">
+            🎀 마생
+            <span class="owner">
+                주인장
+            </span>
+        </div>
+
+        <div class="bubble">
+            사이트 방문 감사합니다 ♡
+        </div>
+
+    </div>
+
+</div>
+
+<div class="form">
+
+    <input
+        id="nickname"
+        placeholder="닉네임"
+    >
+
+    <textarea
+        id="message"
+        placeholder="메시지를 남겨주세요 ♡"
+    ></textarea>
+
+    <button onclick="sendMessage()">
+        ♡ SEND ♡
+    </button>
+
+</div>
+
+
+</div>
+
+</body>
+</html>
